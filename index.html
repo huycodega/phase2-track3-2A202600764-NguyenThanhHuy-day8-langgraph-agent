@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Day 08 — LangGraph Agentic Orchestration Lab</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1220;
+    --panel: #181c2e;
+    --panel-2: #1f2440;
+    --text: #e8eaf2;
+    --muted: #9aa3c7;
+    --accent: #6c8cff;
+    --accent-2: #36d39a;
+    --warn: #ffb454;
+    --danger: #ff6b81;
+    --border: #2a2f4a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    background: radial-gradient(1200px 600px at 80% -10%, #1c2348 0%, var(--bg) 55%);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  header {
+    padding: 48px 24px 32px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { margin: 0 0 8px; font-size: 2rem; }
+  header .sub { color: var(--muted); font-size: 1.05rem; }
+  .badges { margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .badge {
+    background: var(--panel-2); border: 1px solid var(--border);
+    padding: 6px 14px; border-radius: 999px; font-size: .85rem; color: var(--muted);
+  }
+  .badge b { color: var(--accent-2); }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 24px 64px; }
+  section { margin-bottom: 40px; }
+  h2 {
+    font-size: 1.35rem; margin: 0 0 16px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent); display: inline-block;
+  }
+  .grid { display: grid; gap: 16px; }
+  .kpis { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px 20px;
+  }
+  .kpi .value { font-size: 1.9rem; font-weight: 700; color: var(--accent-2); }
+  .kpi .label { color: var(--muted); font-size: .85rem; margin-top: 2px; }
+  .kpi.warn .value { color: var(--warn); }
+  .kpi.accent .value { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; overflow: hidden; border-radius: 12px; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: var(--panel-2); color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td.center, th.center { text-align: center; }
+  .tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+  .ok { background: rgba(54,211,154,.15); color: var(--accent-2); }
+  .no { background: rgba(255,107,129,.15); color: var(--danger); }
+  .neutral { background: rgba(154,163,199,.15); color: var(--muted); }
+  .mermaid { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; text-align: center; }
+  code, pre {
+    font-family: "JetBrains Mono", Consolas, monospace;
+    background: #11142a; border: 1px solid var(--border); border-radius: 8px;
+  }
+  code { padding: 1px 6px; font-size: .85rem; color: #c7d0ff; }
+  pre { padding: 16px; overflow-x: auto; font-size: .85rem; color: #c7d0ff; }
+  ul { padding-left: 20px; }
+  li { margin: 6px 0; }
+  footer { text-align: center; color: var(--muted); font-size: .85rem; padding: 24px; border-top: 1px solid var(--border); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Day 08 — LangGraph Agentic Orchestration Lab</h1>
+  <div class="sub">Support-ticket agent · state · routing · retry · HITL · persistence · metrics</div>
+  <div class="badges">
+    <span class="badge">Sinh viên: <b>Nguyễn Thành Huy</b></span>
+    <span class="badge">MSSV: <b>2A202600764</b></span>
+    <span class="badge">Track 3 · Day 23 submission</span>
+    <span class="badge">LLM: <b>Groq · llama-3.1-8b-instant</b></span>
+  </div>
+</header>
+
+<main>
+  <!-- KPIs -->
+  <section>
+    <h2>1. Tổng quan kết quả</h2>
+    <div class="grid kpis">
+      <div class="card kpi"><div class="value">7/7</div><div class="label">Scenarios pass</div></div>
+      <div class="card kpi"><div class="value">100%</div><div class="label">Success rate</div></div>
+      <div class="card kpi"><div class="value">100%</div><div class="label">Route accuracy</div></div>
+      <div class="card kpi accent"><div class="value">2</div><div class="label">HITL approvals</div></div>
+      <div class="card kpi warn"><div class="value">3</div><div class="label">Total retries</div></div>
+      <div class="card kpi warn"><div class="value">1</div><div class="label">Dead-letter</div></div>
+      <div class="card kpi"><div class="value">6.43</div><div class="label">Avg nodes/run</div></div>
+      <div class="card kpi"><div class="value">25</div><div class="label">Tests passed</div></div>
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <section>
+    <h2>2. Kiến trúc graph</h2>
+    <p>Workflow chuẩn production cho agent xử lý ticket hỗ trợ: chuẩn hoá input → phân loại bằng LLM (structured output) → định tuyến theo state → gọi mock tool khi cần → LLM-as-judge đánh giá kết quả tool → retry có giới hạn → cổng phê duyệt HITL cho hành động rủi ro → mọi nhánh kết thúc tại <code>finalize → END</code>.</p>
+    <div class="mermaid">
+flowchart TD
+    START([START]) --> intake
+    intake --> classify
+    classify -->|simple| answer
+    classify -->|tool| tool
+    classify -->|missing_info| clarify
+    classify -->|risky| risky_action
+    classify -->|error| retry
+    risky_action --> approval
+    approval -->|approved| tool
+    approval -->|rejected| clarify
+    tool --> evaluate
+    evaluate -->|sufficient| answer
+    evaluate -->|needs retry| retry
+    retry -->|attempt &lt; max| tool
+    retry -->|attempt &gt;= max| dead_letter
+    dead_letter --> finalize
+    answer --> finalize
+    clarify --> finalize
+    finalize --> END([END])
+    </div>
+  </section>
+
+  <!-- Routing table -->
+  <section>
+    <h2>3. Bảng định tuyến</h2>
+    <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <thead><tr><th>Route</th><th>Điều kiện kích hoạt</th><th>Node tiếp theo</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag neutral">simple</span></td><td>Câu hỏi hỗ trợ chung</td><td><code>answer</code></td></tr>
+        <tr><td><span class="tag accent" style="background:rgba(108,140,255,.15);color:var(--accent)">tool</span></td><td>Tra cứu / trạng thái / tìm kiếm</td><td><code>tool → evaluate</code></td></tr>
+        <tr><td><span class="tag neutral">missing_info</span></td><td>Yêu cầu mơ hồ, thiếu thông tin</td><td><code>clarify</code></td></tr>
+        <tr><td><span class="tag no">risky</span></td><td>Refund / xoá / gửi email / huỷ (có side effect)</td><td><code>risky_action → approval</code></td></tr>
+        <tr><td><span class="tag warn" style="background:rgba(255,180,84,.15);color:var(--warn)">error</span></td><td>Timeout / crash / service lỗi</td><td><code>retry</code></td></tr>
+        <tr><td><span class="tag no">retry exhausted</span></td><td><code>attempt &gt;= max_attempts</code></td><td><code>dead_letter</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- Scenario results -->
+  <section>
+    <h2>4. Kết quả từng scenario</h2>
+    <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <thead><tr>
+        <th>Scenario</th><th>Expected</th><th>Actual</th>
+        <th class="center">Success</th><th class="center">Retry</th>
+        <th class="center">HITL</th><th class="center">Dead-letter</th><th class="center">Nodes</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- State schema -->
+  <section>
+    <h2>5. State schema (lean &amp; checkpoint-safe)</h2>
+    <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <thead><tr><th>Field</th><th>Reducer</th><th>Mục đích</th></tr></thead>
+      <tbody>
+        <tr><td><code>query, route, risk_level</code></td><td>overwrite</td><td>Ticket hiện tại &amp; quyết định route</td></tr>
+        <tr><td><code>classification</code></td><td>overwrite</td><td>Kết quả LLM (confidence + rationale)</td></tr>
+        <tr><td><code>tool_results</code></td><td>append</td><td>Output mock tool (JSON-serializable)</td></tr>
+        <tr><td><code>evaluation_result</code></td><td>overwrite</td><td>Cổng retry (LLM-as-judge)</td></tr>
+        <tr><td><code>pending_question</code></td><td>overwrite</td><td>Câu hỏi làm rõ khi thiếu thông tin</td></tr>
+        <tr><td><code>proposed_action, approval</code></td><td>overwrite</td><td>Ngữ cảnh HITL cho hành động rủi ro</td></tr>
+        <tr><td><code>attempt, max_attempts</code></td><td>overwrite</td><td>Điều khiển retry có giới hạn</td></tr>
+        <tr><td><code>final_answer</code></td><td>overwrite</td><td>Phản hồi cuối cho người dùng</td></tr>
+        <tr><td><code>messages, errors, events</code></td><td>append</td><td>Truy vết, audit, metrics</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- How to run -->
+  <section>
+    <h2>6. Cách chạy</h2>
+    <pre>cd e:\labvin\phase2-track3-day8-langgraph-agent
+python -m pip install -e ".[dev,groq,sqlite]"   # cài 1 lần
+
+python -m pytest                                 # 25 tests
+python -m langgraph_agent_lab.cli run-scenarios \
+    --config configs/lab.yaml --output outputs/metrics.json
+python -m langgraph_agent_lab.cli validate-metrics --metrics outputs/metrics.json</pre>
+    <p>Cấu hình LLM trong <code>.env</code> (xem <code>.env.example</code>): đặt một trong các key <code>GROQ_API_KEY</code> / <code>GEMINI_API_KEY</code> / <code>OPENAI_API_KEY</code> / <code>ANTHROPIC_API_KEY</code>.</p>
+  </section>
+
+  <!-- RAG grading -->
+  <section>
+    <h2>7. RAG grading (truy xuất tài liệu)</h2>
+    <p><code>answer_node</code> được nối với một knowledge base TF-IDF (5 tài liệu chính sách) để trả lời grounded. Lệnh <code>make grade-rag</code> chấm 10 câu hỏi: kiểm tra <b>top-1 document đúng</b> + chứa đáp án mong đợi + không chứa giá trị cấm.</p>
+    <div class="grid kpis" style="margin-bottom:16px">
+      <div class="card kpi"><div class="value">10/10</div><div class="label">RAG questions pass</div></div>
+      <div class="card kpi"><div class="value">100%</div><div class="label">Top-1 doc accuracy</div></div>
+      <div class="card kpi"><div class="value">5</div><div class="label">KB documents</div></div>
+      <div class="card kpi accent"><div class="value">0</div><div class="label">Forbidden hits</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <thead><tr><th>ID</th><th>Câu hỏi</th><th>Top-1 doc</th><th class="center">Contains</th><th class="center">Forbidden</th><th class="center">Pass</th></tr></thead>
+      <tbody id="ragrows"></tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- Extensions -->
+  <section>
+    <h2>8. Extension đã làm</h2>
+    <ul>
+      <li><b>RAG grounding</b> — knowledge base TF-IDF thuần Python, <code>answer_node</code> truy xuất top-k tài liệu để grounded; <code>make grade-rag</code> pass <b>10/10</b> (top-1 doc đúng + keyword + forbidden).</li>
+      <li><b>SQLite persistence</b> — <code>SqliteSaver</code> + WAL mode, thread_id riêng mỗi scenario; xác minh có <b>12 checkpoint</b> và <code>get_state_history()</code> truy xuất được.</li>
+      <li><b>Real HITL interrupt</b> — <code>approval_node</code> hỗ trợ <code>LANGGRAPH_INTERRUPT=true</code> dùng <code>interrupt()</code>, mặc định mock approval an toàn cho CI.</li>
+      <li><b>LLM-as-judge</b> — <code>evaluate_node</code> dùng LLM chấm chất lượng kết quả tool, có guard theo schema.</li>
+      <li><b>Mermaid graph diagram</b> — sơ đồ kiến trúc trong report &amp; trang này.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  Day 08 LangGraph Lab · Nguyễn Thành Huy (2A202600764) · Generated report ·
+  <a href="reports/lab_report.md">lab_report.md</a> ·
+  <a href="outputs/metrics.json">metrics.json</a>
+</footer>
+
+<script>
+  const data = {
+    "scenario_metrics": [
+      {"scenario_id":"S01_simple","expected_route":"simple","actual_route":"simple","success":true,"retry_count":0,"interrupt_count":0,"dead_letter":false,"nodes_visited":4},
+      {"scenario_id":"S02_tool","expected_route":"tool","actual_route":"tool","success":true,"retry_count":0,"interrupt_count":0,"dead_letter":false,"nodes_visited":6},
+      {"scenario_id":"S03_missing","expected_route":"missing_info","actual_route":"missing_info","success":true,"retry_count":0,"interrupt_count":0,"dead_letter":false,"nodes_visited":4},
+      {"scenario_id":"S04_risky","expected_route":"risky","actual_route":"risky","success":true,"retry_count":0,"interrupt_count":1,"dead_letter":false,"nodes_visited":8},
+      {"scenario_id":"S05_error","expected_route":"error","actual_route":"error","success":true,"retry_count":2,"interrupt_count":0,"dead_letter":false,"nodes_visited":10},
+      {"scenario_id":"S06_delete","expected_route":"risky","actual_route":"risky","success":true,"retry_count":0,"interrupt_count":1,"dead_letter":false,"nodes_visited":8},
+      {"scenario_id":"S07_dead_letter","expected_route":"error","actual_route":"error","success":true,"retry_count":1,"interrupt_count":0,"dead_letter":true,"nodes_visited":5}
+    ]
+  };
+  const yes = '<span class="tag ok">yes</span>';
+  const no  = '<span class="tag neutral">–</span>';
+  document.getElementById("rows").innerHTML = data.scenario_metrics.map(m => `
+    <tr>
+      <td><code>${m.scenario_id}</code></td>
+      <td>${m.expected_route}</td>
+      <td>${m.actual_route}</td>
+      <td class="center">${m.success ? yes : '<span class="tag no">no</span>'}</td>
+      <td class="center">${m.retry_count || no}</td>
+      <td class="center">${m.interrupt_count ? yes : no}</td>
+      <td class="center">${m.dead_letter ? '<span class="tag no">yes</span>' : no}</td>
+      <td class="center">${m.nodes_visited}</td>
+    </tr>`).join("");
+
+  const rag = [
+    {"id":"gq_d10_01","q":"Hạn gửi yêu cầu hoàn tiền (ngày làm việc)","doc":"policy_refund_v4"},
+    {"id":"gq_d10_02","q":"Sản phẩm bị loại khỏi điều kiện hoàn tiền","doc":"policy_refund_v4"},
+    {"id":"gq_d10_03","q":"Thời gian Finance Team xử lý hoàn tiền","doc":"policy_refund_v4"},
+    {"id":"gq_d10_04","q":"SLA phản hồi ban đầu ticket P1","doc":"sla_p1_2026"},
+    {"id":"gq_d10_05","q":"SLA resolution ticket P1","doc":"sla_p1_2026"},
+    {"id":"gq_d10_06","q":"Thời gian auto escalate ticket P1","doc":"sla_p1_2026"},
+    {"id":"gq_d10_07","q":"Số lần đăng nhập sai để khóa tài khoản","doc":"it_helpdesk_faq"},
+    {"id":"gq_d10_08","q":"Giới hạn thiết bị VPN","doc":"it_helpdesk_faq"},
+    {"id":"gq_d10_09","q":"Ngày phép năm (HR 2026, <3 năm)","doc":"hr_leave_policy"},
+    {"id":"gq_d10_10","q":"Người phê duyệt Level 4 Admin Access","doc":"access_control_sop"}
+  ];
+  document.getElementById("ragrows").innerHTML = rag.map(r => `
+    <tr>
+      <td><code>${r.id}</code></td>
+      <td>${r.q}</td>
+      <td><code>${r.doc}</code></td>
+      <td class="center">${yes}</td>
+      <td class="center">${no}</td>
+      <td class="center">${yes}</td>
+    </tr>`).join("");
+
+  mermaid.initialize({ startOnLoad: true, theme: "dark", themeVariables: { fontFamily: "Segoe UI" } });
+</script>
+</body>
+</html>

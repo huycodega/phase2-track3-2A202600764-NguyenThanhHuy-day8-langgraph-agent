@@ -2,7 +2,7 @@
 
 ## 1. Team / Student
 
-- Name: Luong Trung Duc
+- Name: Nguyen Thanh Huy
 - Repo/commit: local workspace submission
 - Date: 2026-06-29
 
@@ -108,6 +108,10 @@ and crash recovery can be scoped per ticket.
 
 ## 9. Extension Work
 
+- **RAG grounding**: `answer_node` retrieves from a TF-IDF knowledge base
+  (`data/kb/knowledge_base.json`) so answers are grounded in policy documents.
+  `make grade-rag` evaluates 10 retrieval-QA questions (top-1 doc match + keyword
+  checks) and currently passes 10/10. State records `retrieved_docs` and `top1_doc_id`.
 - SQLite checkpoint support was implemented as a persistence extension.
 - The report includes a Mermaid graph diagram for demo/readability.
 - `approval_node` supports `LANGGRAPH_INTERRUPT=true` for real LangGraph HITL interrupts,

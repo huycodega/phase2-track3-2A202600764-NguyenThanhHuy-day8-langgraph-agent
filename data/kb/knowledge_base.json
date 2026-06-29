@@ -1,0 +1,27 @@
+[
+  {
+    "doc_id": "policy_refund_v4",
+    "title": "Chính sách hoàn tiền (v4, hiệu lực 2026)",
+    "text": "Chính sách hoàn tiền phiên bản v4, có hiệu lực năm 2026 và thay thế mọi phiên bản trước đó. Theo chính sách hoàn tiền hiện hành, khách hàng có tối đa 7 ngày làm việc để gửi yêu cầu hoàn tiền sau khi đơn hàng được xác nhận. Các loại sản phẩm là hàng kỹ thuật số, license key và subscription bị loại khỏi điều kiện hoàn tiền. Sau khi yêu cầu hoàn tiền hợp lệ được phê duyệt, Finance Team xử lý hoàn tiền trong 3-5 ngày làm việc và gửi xác nhận cho khách hàng."
+  },
+  {
+    "doc_id": "sla_p1_2026",
+    "title": "SLA cho ticket ưu tiên P1 (2026)",
+    "text": "Cam kết mức dịch vụ (SLA) cho ticket mức ưu tiên P1 trong năm 2026. SLA phản hồi ban đầu (initial response) cho ticket P1 là 15 phút kể từ khi ticket được tạo. SLA resolution (thời gian giải quyết) cho ticket P1 là 4 giờ. Nếu không có phản hồi nào với ticket P1 sau 10 phút, hệ thống sẽ auto escalate ticket lên cấp quản lý trực tiếp để bảo đảm tuân thủ SLA."
+  },
+  {
+    "doc_id": "it_helpdesk_faq",
+    "title": "IT Helpdesk FAQ",
+    "text": "Câu hỏi thường gặp cho IT Helpdesk. Bảo mật đăng nhập: tài khoản sẽ bị khóa tự động sau 5 lần đăng nhập sai liên tiếp, người dùng cần liên hệ IT để mở khóa. Truy cập từ xa: VPN của công ty cho phép mỗi người dùng kết nối tối đa 2 thiết bị cùng lúc; nếu vượt quá giới hạn 2 thiết bị, phiên kết nối cũ nhất sẽ bị ngắt."
+  },
+  {
+    "doc_id": "hr_leave_policy",
+    "title": "Chính sách nghỉ phép HR 2026",
+    "text": "Chính sách nghỉ phép nhân sự (HR) phiên bản 2026. Nhân viên có dưới 3 năm kinh nghiệm được hưởng 12 ngày phép năm. Nhân viên có từ 3 năm kinh nghiệm trở lên được hưởng 15 ngày phép năm. Số ngày phép năm chưa dùng có thể chuyển sang quý đầu của năm kế tiếp theo quy định HR 2026."
+  },
+  {
+    "doc_id": "access_control_sop",
+    "title": "Quy trình kiểm soát truy cập (Access Control SOP)",
+    "text": "Quy trình chuẩn (SOP) về kiểm soát truy cập hệ thống. Quyền truy cập được chia theo cấp độ. Level 4 Admin Access là cấp quyền cao nhất, cho phép thao tác quản trị toàn hệ thống, và yêu cầu phê duyệt bởi IT Manager và CISO trước khi được cấp. Mọi lần cấp quyền Level 4 đều phải được ghi nhật ký kiểm toán."
+  }
+]

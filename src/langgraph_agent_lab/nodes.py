@@ -14,6 +14,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from .llm import DeterministicSupportLLM, get_llm
+from .retrieval import get_knowledge_base
 from .state import AgentState, Route, make_event
 
 
@@ -85,19 +86,25 @@ END_TOOL_RESULT
 ANSWER_PROMPT = """You are a support-ticket agent writing the final user-facing response.
 
 Rules:
-- Ground the answer only in the support ticket, tool context, proposed action, and
-  approval context below.
+- Ground the answer only in the support ticket, retrieved knowledge base, tool
+  context, proposed action, and approval context below.
+- Prefer concrete facts (numbers, durations, names) found in the knowledge base and
+  quote them exactly. If the knowledge base answers the ticket, lead with that fact.
 - Do not invent order status, policy details, or action completion that is not present in context.
 - For risky actions, explain the approval status and avoid claiming a real side
   effect was performed.
 - For missing information, ask for the minimum extra details needed.
-- Keep the response concise and actionable.
+- Answer in the same language as the support ticket. Keep the response concise and actionable.
 
 ROUTE: {route}
 
 SUPPORT_TICKET:
 {query}
 END_TICKET
+
+KNOWLEDGE_BASE:
+{retrieved_context}
+END_KNOWLEDGE_BASE
 
 TOOL_CONTEXT:
 {tool_context}
@@ -255,11 +262,16 @@ def evaluate_node(state: AgentState) -> dict[str, Any]:
 
 
 def answer_node(state: AgentState) -> dict[str, Any]:
-    """Generate a grounded final response using an LLM."""
+    """Generate a grounded final response using an LLM and knowledge-base retrieval."""
+
+    query = state.get("query", "")
+    retrieved_docs, top1_doc_id = _retrieve_context(query)
+    retrieved_context = _format_retrieved_context(retrieved_docs)
 
     prompt = ANSWER_PROMPT.format(
         route=state.get("route", Route.SIMPLE.value),
-        query=state.get("query", ""),
+        query=query,
+        retrieved_context=retrieved_context,
         tool_context=json.dumps(state.get("tool_results", []), ensure_ascii=False),
         proposed_action=state.get("proposed_action") or "",
         approval_context=json.dumps(state.get("approval") or {}, ensure_ascii=False),
@@ -277,8 +289,18 @@ def answer_node(state: AgentState) -> dict[str, Any]:
     answer = answer.strip() or _fallback_final_answer(state)
     return {
         "final_answer": answer,
+        "retrieved_docs": retrieved_docs,
+        "top1_doc_id": top1_doc_id,
         "messages": ["answer:final"],
-        "events": [make_event("answer", "completed", "final answer generated", source=source)],
+        "events": [
+            make_event(
+                "answer",
+                "completed",
+                "final answer generated",
+                source=source,
+                top1_doc_id=top1_doc_id,
+            )
+        ],
     }
 
 
@@ -447,6 +469,28 @@ def _model_dump(value: Any) -> dict[str, Any]:
     if hasattr(value, "model_dump"):
         return dict(value.model_dump())
     raise TypeError(f"Expected structured LLM output, got {type(value).__name__}")
+
+
+def _retrieve_context(query: str, k: int = 4) -> tuple[list[dict[str, Any]], str | None]:
+    """Retrieve top-k knowledge base docs for grounding; degrade gracefully."""
+    if not query.strip():
+        return [], None
+    try:
+        results = get_knowledge_base().search(query, k=k)
+    except Exception:
+        return [], None
+    docs = [doc.to_dict() for doc in results]
+    top1_doc_id = docs[0]["doc_id"] if docs else None
+    return docs, top1_doc_id
+
+
+def _format_retrieved_context(retrieved_docs: list[dict[str, Any]]) -> str:
+    if not retrieved_docs:
+        return "(no knowledge base match)"
+    return "\n".join(
+        f"[{doc.get('doc_id')}] {doc.get('title')}: {doc.get('text')}"
+        for doc in retrieved_docs
+    )
 
 
 def _message_content(response: Any) -> str:

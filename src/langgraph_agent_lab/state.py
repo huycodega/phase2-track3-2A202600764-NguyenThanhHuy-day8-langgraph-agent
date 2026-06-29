@@ -82,6 +82,8 @@ class AgentState(TypedDict, total=False):
     pending_question: str | None
     proposed_action: str | None
     approval: dict[str, Any] | None
+    retrieved_docs: list[dict[str, Any]]
+    top1_doc_id: str | None
     dead_letter: bool
     metrics: dict[str, Any]
     messages: Annotated[list[str | dict[str, Any]], add]
@@ -126,6 +128,8 @@ def initial_state(scenario: Scenario) -> AgentState:
         "pending_question": None,
         "proposed_action": None,
         "approval": None,
+        "retrieved_docs": [],
+        "top1_doc_id": None,
         "dead_letter": False,
         "metrics": {},
         "messages": [],
