@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+
+# Persistence
+checkpoints.db
+checkpoints.db-wal
+checkpoints.db-shm
+outputs/*.sqlite
+outputs/*.sqlite-wal
+outputs/*.sqlite-shm
+
+# Testing
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Hidden grading — do NOT distribute to students
+data/grading/

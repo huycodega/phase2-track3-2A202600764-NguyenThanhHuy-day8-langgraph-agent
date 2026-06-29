@@ -1,0 +1,103 @@
+"""Metrics schema and helpers."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from statistics import mean
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+
+class ScenarioMetric(BaseModel):
+    scenario_id: str
+    success: bool
+    expected_route: str
+    actual_route: str | None = None
+    route_matched: bool = False
+    final_answer_present: bool = False
+    dead_letter: bool = False
+    nodes_visited: int = 0
+    retry_count: int = 0
+    interrupt_count: int = 0
+    approval_required: bool = False
+    approval_observed: bool = False
+    latency_ms: int = 0
+    errors: list[str] = Field(default_factory=list)
+
+
+class MetricsReport(BaseModel):
+    total_scenarios: int
+    success_rate: float
+    route_accuracy: float = 0.0
+    avg_nodes_visited: float
+    total_retries: int
+    total_interrupts: int
+    hitl_triggered: int = 0
+    dead_letter_count: int = 0
+    failure_count: int = 0
+    invalid_final_answer_count: int = 0
+    resume_success: bool = False
+    scenario_metrics: list[ScenarioMetric]
+
+
+def metric_from_state(
+    state: dict[str, Any],
+    expected_route: str,
+    approval_required: bool,
+) -> ScenarioMetric:
+    events = state.get("events", []) or []
+    errors = state.get("errors", []) or []
+    actual_route = state.get("route")
+    approval = state.get("approval")
+    nodes = [event.get("node", "unknown") for event in events]
+    retry_count = sum(1 for node in nodes if node == "retry")
+    interrupt_count = sum(1 for node in nodes if node == "approval")
+    final_answer_present = bool(state.get("final_answer") or state.get("pending_question"))
+    route_matched = actual_route == expected_route
+    dead_letter = bool(state.get("dead_letter")) or any(node == "dead_letter" for node in nodes)
+    success = route_matched and final_answer_present
+    if approval_required:
+        success = success and approval is not None
+    return ScenarioMetric(
+        scenario_id=str(state.get("scenario_id", "unknown")),
+        success=success,
+        expected_route=expected_route,
+        actual_route=actual_route,
+        route_matched=route_matched,
+        final_answer_present=final_answer_present,
+        dead_letter=dead_letter,
+        nodes_visited=len(nodes),
+        retry_count=retry_count,
+        interrupt_count=interrupt_count,
+        approval_required=approval_required,
+        approval_observed=approval is not None,
+        latency_ms=sum(int(event.get("latency_ms", 0) or 0) for event in events),
+        errors=[str(error) for error in errors],
+    )
+
+
+def summarize_metrics(items: list[ScenarioMetric]) -> MetricsReport:
+    if not items:
+        raise ValueError("No scenario metrics to summarize")
+    return MetricsReport(
+        total_scenarios=len(items),
+        success_rate=sum(1 for item in items if item.success) / len(items),
+        route_accuracy=sum(1 for item in items if item.route_matched) / len(items),
+        avg_nodes_visited=mean(item.nodes_visited for item in items),
+        total_retries=sum(item.retry_count for item in items),
+        total_interrupts=sum(item.interrupt_count for item in items),
+        hitl_triggered=sum(1 for item in items if item.approval_observed),
+        dead_letter_count=sum(1 for item in items if item.dead_letter),
+        failure_count=sum(1 for item in items if not item.success),
+        invalid_final_answer_count=sum(1 for item in items if not item.final_answer_present),
+        resume_success=False,
+        scenario_metrics=items,
+    )
+
+
+def write_metrics(report: MetricsReport, output_path: str | Path) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8")
